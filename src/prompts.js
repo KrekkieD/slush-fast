@@ -1,10 +1,11 @@
+'use strict';
+
 var _s = require('underscore.string'),
 	extend = require('extend'),
 	inquirer = require('inquirer'),
 	Q = require('q'),
 	scaffolding = require('./scaffolding'),
-	wrap = require('./q-utils')
-	.wrap;
+	wrap = require('./q-utils').wrap;
 
 var prompts = {
 	// new
@@ -24,7 +25,6 @@ module.exports = prompts;
 // new
 //
 function application(defaults) {
-	var deferred = Q.defer();
 
 	var prompts = [{
 		name: 'appName',
@@ -102,6 +102,8 @@ function application(defaults) {
 		}
 	}];
 
+    var deferred = Q.defer();
+
 	inquirer.prompt(prompts,
 		function (answers) {
 			if (!answers.proceed) {
@@ -115,11 +117,10 @@ function application(defaults) {
 }
 
 function _moduleName(transport) {
-	var module = transport.module;
-	if (!module) {
+	if (!transport.module) {
 		throw new Error('transport.module expected');
 	} else {
-		if (module.newNs) {
+		if (transport.module.newNs) {
 			return Q(transport);
 		} else {
 			return promptForModuleName(transport);
@@ -128,16 +129,14 @@ function _moduleName(transport) {
 }
 
 function promptForModuleName(transport) {
-	var module = transport.module;
+
 	// existingNamespace
 	var deferred = Q.defer();
 
 	var createModuleMessage =
-		'Module name (for example \'freak\' or \'tif\' or \'freak.foo.bar.snafu\')';
-	if (module.existingNamespace) {
-		createModuleMessage = 'Module name in ' + module.existingNamespace +
-			' namespace: ' + module.existingNamespace + '.';
-	}
+		'Module name (for example \'freak\' or \'tif\' or \'freak.foo.bar.snafu\'), ' +
+        'your prefix (\'' + transport.module.prefix +'.' + transport.module.ns + '\') will be prepended';
+
 	inquirer.prompt([{
 			type: 'input',
 			name: 'moduleName',

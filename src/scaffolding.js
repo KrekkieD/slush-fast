@@ -1,3 +1,5 @@
+'use strict';
+
 var fs = require('fs'),
 	iniparser = require('iniparser'),
 	path = require('path'),
@@ -72,29 +74,31 @@ function getGitRepositoryUrl(remoteKey) {
 }
 
 function ns(dir) {
-	var modulePrefix = '';
 	var srcAppDir = 'src' + path.sep + 'app';
 
 	var currentDir = path.resolve(dir);
 	var srcAppDirIndex = currentDir.indexOf(srcAppDir);
 	if (srcAppDirIndex !== -1) {
 		return currentDir.substring(srcAppDirIndex + srcAppDir.length + 1)
-			.split('/');
+			.split(path.sep);
 	} else {
 		throw new Error('Couldn\'t find src/app, you\'re not a in a source folder');
 	}
 }
 
 function findBower(dir) {
+
 	var bowerConfig = 'bower.json';
 
 	var currentDir = path.resolve(dir);
-	var pathParts = currentDir.split('/');
+	var pathParts = currentDir.split(path.sep);
 	var bower = {};
+
 	while (pathParts.length && !bower.name) {
-		var bowerConfigAbsolute = pathParts.join('/') + '/' + bowerConfig;
+		var bowerConfigAbsolute = path.resolve(pathParts.join(path.sep), bowerConfig);
 		if (fs.existsSync(bowerConfigAbsolute)) {
 			bower = require(bowerConfigAbsolute);
+            break;
 		}
 		pathParts.pop();
 	}
@@ -102,15 +106,19 @@ function findBower(dir) {
 }
 
 function findNpm(dir) {
+
 	var npmConfig = 'package.json';
 
 	var currentDir = path.resolve(dir);
-	var pathParts = currentDir.split('/');
+	var pathParts = currentDir.split(path.sep);
 	var npm = {};
 	while (pathParts.length && !npm.name) {
-		var npmConfigAbsolute = pathParts.join('/') + '/' + npmConfig;
+
+		var npmConfigAbsolute = pathParts.join(path.sep) + path.sep + npmConfig;
+
 		if (fs.existsSync(npmConfigAbsolute)) {
 			npm = require(npmConfigAbsolute);
+            break;
 		}
 		pathParts.pop();
 	}
@@ -125,15 +133,17 @@ function _prefixName(prefix) {
 		.join('.');
 }
 
+// extend transport with more module name specs
 function _moduleName(transport) {
 
 	var module = transport.module;
 	if (!module) {
 		throw new Error('transport.module missing');
 	} else {
+
 		module.prefixWithDot = module.prefix ? module.prefix + '.' : '';
-		module.camelCasedPrefix = _s.camelize(module.prefix.split('.')
-			.join('-'));
+		module.camelCasedPrefix = _s.camelize(module.prefix.split('.').join('-'));
+
 
 		var ns = module.ns;
 		if (!ns) {
@@ -153,6 +163,7 @@ function _moduleName(transport) {
 				module.name = _formatModuleName(module.newNs);
 				module.fullNs = module.ns + '.' + module.name;
 			} else {
+                // this subtracts the current module name from an existing namespace?
 				module.fullNs = module.ns;
 				module.name = module.ns.split('.')
 					.pop();
@@ -160,18 +171,14 @@ function _moduleName(transport) {
 		}
 
 		module.prefixedFullNs = module.prefixWithDot + module.fullNs;
-		module.camelCasePrefixedFullNs = _s.camelize(module.prefixedFullNs.split('.')
-			.join('-'));
-		//	console.log('module.prefixedFullNs', module.prefixedFullNs);
-		//	console.log('module.camelCasePrefixedFullNs', module.camelCasePrefixedFullNs);
-		module.path = 'app/' + module.fullNs.split('.')
-			.join('/');
+		module.camelCasePrefixedFullNs = _s.camelize(module.prefixedFullNs.split('.').join('-'));
+		module.path = 'app/' + module.fullNs.split('.').join('/');
 
-		//	module.name = module.prefix + module.name;
 	}
 
 	module.fullNsCamelized = _s.camelize(module.fullNs.split('.')
 		.join('-'));
+
 	return transport;
 }
 
@@ -192,7 +199,6 @@ function _partNameFactory(partName, partPostfix) {
 		part.partPostfix = partPostfix;
 		part.upperCaseCamelizedPartSubName = part.partSubName ? _ucfirst(part.partSubName) :
 			part.partSubName = part.partSubName ? part.partSubName : '';
-		'';
 		part.name = _s.camelize(part.newName);
 		part.upperCaseCamelized = _ucfirst(part.name);
 		part.lowerCaseCamelized = _lcfirst(part.name);

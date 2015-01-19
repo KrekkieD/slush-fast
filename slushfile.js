@@ -1,88 +1,40 @@
+'use strict';
+
 var globule = require('globule'),
-	figlet = require('figlet'),
-	fs = require('fs'),
 	gulp = require('gulp'),
-	gutil = require('gulp-util'),
-	scaffolding = require('./src/scaffolding'),
-	sh = require('shelljs');
+	scaffolding = require('./src/scaffolding');
 
 // add gulp release tasks
 require('gulp-release-tasks')(gulp);
-/*
-gutil.log('\n' + ('TIF Angular Generator'.split(' ')
-	.map(function (word) {
-		return figlet.textSync(word, {
-			font: 'colossal'
-		});
-	})
-	.join('\n')));
- */
 
-var bower = scaffolding.findBower('.');
-var slushNpm = scaffolding.findNpm(__dirname + '/templates/application/');
+
+// set global config
+global.config = {};
+global.config.paths = require(__dirname + '/src/config/paths');
+global.config.prettify = require(__dirname + '/src/config/prettify');
+global.config.slushNpm = scaffolding.findNpm(__dirname + '/templates/application/');
+global.config.bower = scaffolding.findBower('.');
+
 
 // Settings
 var settings = {
-
 	gulp: gulp,
-	bower: bower,
+	bower: global.config.bower,
 	slush: {
-		npm: slushNpm
+		npm: global.config.slushNpm
 	},
-	slushNpm: slushNpm,
+	slushNpm: global.config.slushNpm,
 	src: __dirname + '/src',
 	slushtasks: __dirname + '/slushtasks',
 	applications: './src/applications',
 	modules: './src/modules',
 	templates: __dirname + '/templates',
 	docs: __dirname + '/docs',
-	prettify: {
-		js: {
-			braceStyle: "collapse",
-			breakChainedMethods: true,
-			e4x: false,
-			evalCode: false,
-			indentChar: " ",
-			indentLevel: 0,
-			indentSize: 4,
-			indentWithTabs: false,
-			jslintHappy: false,
-			keepArrayIndentation: true,
-			keepFunctionIndentation: true,
-			maxPreserveNewlines: 10,
-			preserveNewlines: true,
-			spaceBeforeConditional: true,
-			spaceInParen: false,
-			unescapeStrings: false,
-			wrapLineLength: 0
-		}
-	},
-	fixmyjs: {
-		'asi': true,
-		'boss': true,
-		'curly': true,
-		'eqeqeq': false,
-		'eqnull': true,
-		'esnext': true,
-		'expr': true,
-		'forin': true,
-		'immed': true,
-		'laxbreak': true,
-		'newcap': false,
-		'noarg': true,
-		'node': true,
-		'nonew': true,
-		'plusplus': true,
-		'quotmark': 'single',
-		'strict': false,
-		'undef': true,
-		'unused': true,
-		'white': true
-	}
+	prettify: global.config.prettify
 };
 
 // Load all task files
-globule.find(__dirname + '/slushtasks/*')
+globule.find(__dirname + '/src/slushtasks/*')
 	.map(function (file) {
 		require(file)(settings);
 	});

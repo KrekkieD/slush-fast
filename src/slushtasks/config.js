@@ -1,5 +1,6 @@
-var gutil = require('gulp-util'),
-	conflict = require('gulp-conflict'),
+'use strict';
+
+var conflict = require('gulp-conflict'),
 	prettify = require('gulp-jsbeautifier'),
 	rename = require('gulp-rename'),
 	template = require('gulp-template');

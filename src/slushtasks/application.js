@@ -30,9 +30,7 @@ module.exports = function (options) {
 	var prompts = require(src + '/prompts');
 
 	var gulp = options.gulp;
-	var seq = require('gulp-sequence')
-		.use(gulp);
-
+	var seq = require('gulp-sequence').use(gulp);
 
 	var answers;
 
@@ -74,75 +72,61 @@ module.exports = function (options) {
 
 	var defaults = createDefaults();
 
-	gulp.task('readme', function (done) {
+    // transports holds the merged default + answer config
+    var transport;
 
-		var readme = extend({}, defaults, {
-				slushNpm: options.slushNpm
-			},
-			defaults.bower);
-		util.log('Preparing README files', readme);
-		prepareReadme(readme, function () {
-			gulp.src(globs.docs.readme.project.src)
-				.pipe(template(readme))
-				.pipe(concat(globs.docs.readme.project.dest))
-				.pipe(conflict(globs.docs.readme.project.dest))
-				.pipe(gulp.dest('./'))
-				.on('end', function (err) {
-					if (err) {
-						util.log(util.colors.red('Failed to copy files'));
-					} else {
-						util.log('Files copied');
-					}
+	gulp.task('application', function (done) {
 
-					done(err, true);
-				});
-		});
-	});
-
-	gulp.task('init', function (done) {
 		// prompt for app specific values
 		prompts.application(defaults)
 			.then(function (answers) {
-				extend(defaults, {
-					description: answers.appDescription,
-					version: answers.appVersion,
-					authors: [{
-						name: answers.authorName,
-						email: answers.authorEmail
-					}],
-					repository: {
-						type: 'git',
-						url: answers.appRepository
-					}
-				});
-				extend(defaults.project.name, {
-					full: answers.appName,
-					slug: _s.slugify(answers.appName)
-				});
 
-				extend(defaults.project.angular, {
-					prefix: scaffolding.prefixName(answers.appPrefix)
-				});
-				var bootstrapModuleName = defaults.project.angular.prefix + '.' +
-					answers.bootstrapModule;
-				extend(defaults.project.angular.bootstrap, {
-					module: bootstrapModuleName,
-					element: _s.slugify(bootstrapModuleName.split('.')
-						.join('-')) + '-app'
-				});
+                var angularPrefix = scaffolding.prefixName(answers.appPrefix);
+                var bootstrapModuleName = angularPrefix + '.' + answers.bootstrapModule;
 
-				_.extend(defaults, {
+                var answerConfig = {
+                    description: answers.appDescription,
+                    version: answers.appVersion,
+                    authors: [{
+                        name: answers.authorName,
+                        email: answers.authorEmail
+                    }],
+                    repository: {
+                        type: 'git',
+                        url: answers.appRepository
+                    },
+                    project: {
+                        name: {
+                            full: answers.appName,
+                            slug: _s.slugify(answers.appName)
+                        },
+                        angular: {
+                            prefix: angularPrefix,
+                            bootstrap: {
+                                module: bootstrapModuleName,
+                                element: _s.slugify(bootstrapModuleName.split('.')
+                                    .join('-')) + '-app'
+                            }
+                        }
+                    },
+                    module: {
+                        prefix: angularPrefix,
+                        ns: '',
+                        newNs: answers.bootstrapModule
+                    }
+                };
 
-					module: {
-						prefix: scaffolding.prefixName(answers.appPrefix),
-						ns: '',
-						newNs: answers.bootstrapModule
-					}
-				});
-				return Q.resolve(defaults);
+				transport = extend(true, defaults, answerConfig);
+
+                // waterfall that shit to the next promise
+				return Q.resolve(transport);
+
 			})
+            // update transport with addition module name properties
 			.then(scaffolding.moduleName)
 			.then(function () {
+                // these probably shouldn't be gulp tasks as that makes them available through cli and slush.
+                // might be better to simply queue the gulp streams
 				seq(
 					[
 						'create-bower-json',
@@ -164,23 +148,27 @@ module.exports = function (options) {
 	});
 
 	gulp.task('copy-files', function () {
-		var butNot = [globs.bootstrap.src, globs.index.src, globs.gulpfile.src,
-				globs.bower.src, globs.npm.src
-			]
-			.map(
-				function (glob) {
-					return '!' + glob;
-				});
+
+		var butNot = [
+            globs.bootstrap.src,
+            globs.index.src,
+            globs.gulpfile.src,
+			globs.bower.src,
+            globs.npm.src
+		].map(function (glob) {
+            return '!' + glob;
+        });
 
 		return gulp.src([options.templates + '/application/**/*'].concat(butNot))
-			.pipe(template(defaults))
+			.pipe(template(transport))
 			.pipe(rename(function (file) {
 				if (file.basename[0] === '_') {
 					file.basename = '.' + file.basename.slice(1);
 				}
 			}))
 			.pipe(conflict('./'))
-			.pipe(gulp.dest('./'))
+			.pipe(gulp.dest('./'));
+
 	});
 
 	gulp.task('copy-special-files', function (done) {
@@ -188,7 +176,38 @@ module.exports = function (options) {
 		return gulp.src([globs.bootstrap.src, globs.index.src, globs.gulpfile.src])
 			.pipe(conflict('./'))
 			.pipe(gulp.dest('./'));
+
 	});
+
+    gulp.task('readme', function (done) {
+
+        var readme = extend({},
+            transport,
+            { slushNpm: options.slushNpm },
+            transport.bower
+        );
+
+        util.log('Preparing README files', readme);
+
+        prepareReadme(readme, function () {
+            gulp.src(globs.docs.readme.project.src)
+                .pipe(template(readme))
+                .pipe(concat(globs.docs.readme.project.dest))
+                .pipe(conflict(globs.docs.readme.project.dest))
+                .pipe(gulp.dest('./'))
+                .on('end', function (err) {
+                    if (err) {
+                        util.log(util.colors.red('Failed to copy files'));
+                    } else {
+                        util.log('Files copied');
+                    }
+
+                    done(err, true);
+                });
+
+        });
+
+    });
 
 	gulp.task('create-module', function (done) {
 
@@ -197,19 +216,17 @@ module.exports = function (options) {
 				/*, templates + '/module/module.scenario.js' */
 			])
 			.pipe(rename(function (path) {
-				path.basename = defaults.module.name + '.' + path.basename;
+				path.basename = transport.module.name + '.' + path.basename;
 			}))
-			.pipe(template(defaults))
+			.pipe(template(transport))
 			.pipe(prettify(options.prettify))
-			.pipe(conflict('./src/app/' + defaults.module.name +
-				'/'))
-			.pipe(gulp.dest('./src/app/' + defaults.module.name +
-				'/'));
-
+			.pipe(conflict('./src/app/' + transport.module.name + '/'))
+			.pipe(gulp.dest('./src/app/' + transport.module.name + '/'));
 
 	});
+
 	gulp.task('create-readme', function (done) {
-		// references defaults
+		// references transport
 		done();
 	});
 
@@ -227,31 +244,34 @@ module.exports = function (options) {
 
 
 	gulp.task('update-bower-json', function () {
+
 		return gulp.src(globs.bower.target)
 			.pipe(jeditor(function (json) {
 				extend(json, {
-					name: defaults.project.name.slug, // string
-					description: defaults.description, // string
-					version: defaults.version, // string
-					authors: defaults.authors, // array or object, in our case an array
-					repository: defaults.repository,
+					name: transport.project.name.slug, // string
+					description: transport.description, // string
+					version: transport.version, // string
+					authors: transport.authors, // array or object, in our case an array
+					repository: transport.repository,
 					project: {
-						name: defaults.project.name,
-						angular: defaults.project.angular,
-						includes: defaults.project.includes
+						name: transport.project.name,
+						angular: transport.project.angular,
+						includes: transport.project.includes
 					}
 				});
 
-				//extend(json.project.name, {}, defaults.project.name);
-				//extend(json.project.angular, defaults.project.angular);
+				//extend(json.project.name, {}, transport.project.name);
+				//extend(json.project.angular, transport.project.angular);
 
 				return json;
 			}))
 			.pipe(gulp.dest('./'));
+
 	});
 
 	// package.json
 	gulp.task('create-package-json', function (done) {
+
 		if (!fs.existsSync(globs.npm.target)) {
 			gulp.src(globs.npm.src)
 				.pipe(gulp.dest('./'))
@@ -261,31 +281,37 @@ module.exports = function (options) {
 		} else {
 			done();
 		}
+
 	});
 
 	gulp.task('update-package-json', function (done) {
+
 		return gulp.src(globs.npm.target)
 			.pipe(jeditor(function (json) {
 				extend(json, {
-					name: defaults.project.name.slug, // string
-					description: defaults.description, // string
-					version: defaults.version, // string
-					contributors: defaults.authors, // array
-					repository: defaults.repository // object
+					name: transport.project.name.slug, // string
+					description: transport.description, // string
+					version: transport.version, // string
+					contributors: transport.authors, // array
+					repository: transport.repository // object
 				});
 
 				return json;
 			}))
 			.pipe(gulp.dest('./'));
+
 	});
 
 	gulp.task('install-npm-modules', function (done) {
+
 		return gulp.src('./package.json')
 			.pipe(install());
+
 	});
 
 
 	function prepareReadme(answers, callback) {
+
 		answers.readme = {};
 
 		globule.find(globs.docs.readme.includes.src)
@@ -294,7 +320,9 @@ module.exports = function (options) {
 				var key = path.basename(file, '.md');
 				answers.readme[key] = _.template(value)(answers);
 			});
+
 		callback();
+
 	}
 
 	function createDefaults() {
@@ -315,22 +343,6 @@ module.exports = function (options) {
 			full: workingDirName,
 			slug: _s.slugify(workingDirName)
 		});
-		/*{
-			name: {
-				full: workingDirName,
-				slug: _s.slugify(workingDirName)
-			},
-			angular: {
-				prefix: '',
-				bootstrap: {
-					module: bootstrapModule,
-					element: _s.slugify(bootstrapModule.split('.')
-						.join('-')) + '-app'
-				}
-			}
-		};
-
-		*/
 
 		var defaults = {
 			authors: bower.authors,
@@ -362,41 +374,6 @@ module.exports = function (options) {
 	}
 };
 
-function installNpmModules(callback) {
-	var pipe = multipipe(gulp.src('./package.json'), install());
-
-	pipe.on('end', function () {
-		util.log('Modules installed');
-		callback(null, true);
-	});
-
-	pipe.on('data', function (data) {
-		return data;
-	});
-
-	pipe.on('error', callback);
-}
-
-function getBowerConfig() {
-	var bower = {};
-	var bowerConfig = 'bower.json';
-	if (fs.existsSync('./' + bowerConfig)) {
-		bower = require(sh.pwd() + '/' + bowerConfig);
-	}
-
-	return bower;
-}
-
-function getNpmConfig() {
-	var npm = {};
-	var npmConfig = 'package.json';
-	if (fs.existsSync('./' + npmConfig)) {
-		npm = require(sh.pwd() + '/' + npmConfig);
-	}
-
-	return npm;
-}
-
 function format(string) {
 	if (string) {
 
@@ -404,88 +381,3 @@ function format(string) {
 		return username.replace(/\s/g, '');
 	}
 }
-
-function readJSON(path) {
-		return JSON.parse(fs.readFileSync(path) + '');
-	}
-	// new shit
-
-
-
-/// old shit
-/*
-var defaults = (function () {
-
-var homeDir = scaffolding.getHomeDir();
-var osUserName = homeDir && homeDir.split('/')
-.pop() || 'root';
-
-// throw error when root?
-
-var workingDirName = scaffolding.getWorkingDirName();
-var repositoryUrl = scaffolding.getGitRepositoryUrl();
-// console.log('repositoryUrl', repositoryUrl);
-var gitUser = scaffolding.getGitUser();
-// console.log('gitUser', gitUser);
-// console.log('bower', bower);
-gitUser = gitUser || {};
-
-
-var bootstrapModule = 'unspecified';
-
-var appPrefix = '';
-var appName;
-if (bower.project) {
-
-appPrefix = bower.project.angular.prefix;
-var bootstrap = bower.project.angular.bootstrap;
-if (bootstrap) {
-bootstrapModule = bootstrap.module.substr(appPrefix.length + 1);
-}
-}
-
-var project = bower.project || {
-name: {
-full: workingDirName,
-slug: _s.slugify(workingDirName)
-},
-angular: {
-prefix: appPrefix,
-bootstrap: {
-module: bootstrapModule,
-element: _s.slugify(bootstrapModule.split('.')
-.join('-')) + '-app'
-}
-}
-};
-
-
-var defaultValues = {
-authors: bower.authors,
-appName: appName,
-description: bower.description || '',
-version: bower.version || '0.0.0',
-userName: format(gitUser.name) || osUserName,
-authorEmail: gitUser.email || '',
-mainFile: bower.main || '',
-appRepository: repositoryUrl ? repositoryUrl : '',
-bootstrapModule: bootstrapModule,
-appPrefix: appPrefix,
-bower: bower,
-slush: options.slush,
-slushNpm: options.slushNpm,
-project: project
-};
-
-if (gitUser) {
-if (gitUser.name) {
-defaultValues.authorName = gitUser.name;
-}
-if (gitUser.email) {
-defaultValues.authorEmail = gitUser.email;
-}
-}
-
-return defaultValues;
-})();
- */

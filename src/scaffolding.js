@@ -13,6 +13,7 @@ var scaffolding = {
 	getGitUser: getGitUser,
 	getGitRepositoryUrl: getGitRepositoryUrl,
 	ns: ns,
+	findFast: findFast,
 	findBower: findBower,
 	findNpm: findNpm,
 	prefixName: _prefixName,
@@ -82,8 +83,33 @@ function ns(dir) {
 		return currentDir.substring(srcAppDirIndex + srcAppDir.length + 1)
 			.split(path.sep);
 	} else {
+        return false;
 		throw new Error('Couldn\'t find src/app, you\'re not a in a source folder');
 	}
+}
+
+// TODO: wrap all shared find-functionality in a single func for fast/bower/npm
+function findFast (dir) {
+
+    var fastConfig = 'fast.json';
+
+    var currentDir = path.resolve(dir);
+    var pathParts = currentDir.split(path.sep);
+    var fast = {};
+
+    while (pathParts.length) {
+
+        var fastConfigAbsolute = path.resolve(pathParts.join(path.sep), fastConfig);
+        if (fs.existsSync(fastConfigAbsolute)) {
+            fast = require(fastConfigAbsolute);
+            // log where we found it so we can create relative ptahs
+            fast.fastPath = pathParts.join(path.sep);
+            break;
+        }
+        pathParts.pop();
+    }
+    return fast;
+
 }
 
 function findBower(dir) {
@@ -170,6 +196,9 @@ function _moduleName(transport) {
 			}
 		}
 
+        // add slug for consistency
+        module.slug = module.name;
+
 		module.prefixedFullNs = module.prefixWithDot + module.fullNs;
 		module.camelCasePrefixedFullNs = _s.camelize(module.prefixedFullNs.split('.').join('-'));
 		module.path = 'app/' + module.fullNs.split('.').join('/');
@@ -199,6 +228,7 @@ function _partNameFactory(partName, partPostfix) {
 		part.partPostfix = partPostfix;
 		part.upperCaseCamelizedPartSubName = part.partSubName ? _ucfirst(part.partSubName) :
 			part.partSubName = part.partSubName ? part.partSubName : '';
+
 		part.name = _s.camelize(part.newName);
 		part.upperCaseCamelized = _ucfirst(part.name);
 		part.lowerCaseCamelized = _lcfirst(part.name);
@@ -208,7 +238,7 @@ function _partNameFactory(partName, partPostfix) {
 		part.fullNsNamePartName = transport.module.camelCasePrefixedFullNs + part.upperCaseCamelizedPartName;
 		part.fullNsNameSlug = _s.dasherize(part.fullNsName);
 		return transport;
-	}
+	};
 }
 
 

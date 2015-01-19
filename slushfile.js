@@ -1,36 +1,28 @@
 'use strict';
 
-var globule = require('globule'),
-	gulp = require('gulp'),
-	scaffolding = require('./src/scaffolding');
+var config = require('npmConfig')(__dirname),
+    globule = require('globule'),
+	gulp = require('gulp');
 
 // add gulp release tasks
 require('gulp-release-tasks')(gulp);
 
 
-// set global config
-global.config = {};
-global.config.paths = require(__dirname + '/src/config/paths');
-global.config.prettify = require(__dirname + '/src/config/prettify');
-global.config.slushNpm = scaffolding.findNpm(__dirname + '/templates/application/');
-global.config.bower = scaffolding.findBower('.');
-
-
 // Settings
 var settings = {
 	gulp: gulp,
-	bower: global.config.bower,
+	bower: config.bower,
 	slush: {
-		npm: global.config.slushNpm
+		npm: config.slushNpm
 	},
-	slushNpm: global.config.slushNpm,
+	slushNpm: config.slushNpm,
 	src: __dirname + '/src',
 	slushtasks: __dirname + '/slushtasks',
 	applications: './src/applications',
 	modules: './src/modules',
 	templates: __dirname + '/templates',
 	docs: __dirname + '/docs',
-	prettify: global.config.prettify
+	prettify: config.prettify
 };
 
 // Load all task files
@@ -39,5 +31,5 @@ globule.find(__dirname + '/src/slushtasks/*')
 		require(file)(settings);
 	});
 
-
-gulp.task('default', ['init']);
+// register task 'application' as main init task
+gulp.task('default', ['application']);

@@ -1,0 +1,9 @@
+{
+    "paths": "src/config/paths",
+    "bower": "src/config/bower",
+    "fast": "src/config/fast",
+    "slushNpm": "src/config/slushNpm",
+    "globs": "src/config/globs",
+    "prettify": "src/config/prettify",
+    "namespace": "src/config/namespace"
+}

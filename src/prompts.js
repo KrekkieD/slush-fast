@@ -1,8 +1,6 @@
 'use strict';
 
-var _s = require('underscore.string'),
-	extend = require('extend'),
-	inquirer = require('inquirer'),
+var inquirer = require('inquirer'),
 	Q = require('q'),
 	scaffolding = require('./scaffolding'),
 	wrap = require('./q-utils').wrap;
@@ -30,6 +28,10 @@ function application(defaults) {
 		name: 'appName',
 		message: 'What is the name of your project?',
 		default: defaults.project.name.full
+	}, {
+		name: 'appDescription',
+		message: 'What is the description?',
+		default: defaults.description
 	}, {
 		name: 'appPrefix',
 		message: 'What is the prefix of your project? (for example: tif., ltc. or prds.)',
@@ -62,10 +64,13 @@ function application(defaults) {
 			}
 		},
 		filter: scaffolding.formatModuleName
-	}, {
-		name: 'appDescription',
-		message: 'What is the description?',
-		default: defaults.description
+
+		/*
+		}, {
+		type: 'confirm',
+		name: 'install',
+		message: '?'
+		 */
 	}, {
 		name: 'appVersion',
 		message: 'What is the version of your project?',
@@ -204,7 +209,6 @@ function promptForControllerName(transport) {
 }
 
 function providerName(transport) {
-	var current = transport.provider;
 	// existingNamespace
 	var deferred = Q.defer();
 

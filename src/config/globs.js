@@ -58,6 +58,10 @@ module.exports = {
         src: config.paths.templates + '/application/bower.json',
         target: './bower.json'
     },
+    fast: {
+        src: config.paths.templates + '/application/fast.json',
+        target: './fast.json'
+    },
     docs: {
         readme: {
             includes: {

@@ -128,10 +128,12 @@ module.exports = function (options) {
 				seq(
 					[
 						'create-bower-json',
-						'create-package-json'
+						'create-package-json',
+                        'create-fast-json'
 					], [
 						'update-bower-json',
-						'update-package-json'
+						'update-package-json',
+                        'update-fast-json'
 					], [
 						'copy-files',
 						'copy-special-files'
@@ -153,6 +155,7 @@ module.exports = function (options) {
             globs.index.src,
             globs.gulpfile.src,
 			globs.bower.src,
+			globs.fast.src,
             globs.npm.src
 		].map(function (glob) {
             return '!' + glob;
@@ -263,6 +266,33 @@ module.exports = function (options) {
 			.pipe(gulp.dest('./'));
 
 	});
+
+    gulp.task('create-fast-json', function (done) {
+        if (!fs.existsSync(globs.fast.target)) {
+            gulp.src(globs.fast.src)
+                .pipe(gulp.dest('./'))
+                .on('finish', function () {
+                    done();
+                });
+        } else {
+            done();
+        }
+    });
+
+    gulp.task('update-fast-json', function () {
+
+        return gulp.src(globs.fast.target)
+            .pipe(jeditor(function (json) {
+                extend(json, {
+                    angular: transport.project.angular,
+                    includes: transport.project.includes
+                });
+
+                return json;
+            }))
+            .pipe(gulp.dest('./'));
+
+    });
 
 	// package.json
 	gulp.task('create-package-json', function (done) {

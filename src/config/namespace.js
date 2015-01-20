@@ -7,11 +7,11 @@ var scaffolding = require(config.paths.src + '/scaffolding');
 var ns = scaffolding.ns('.') || [];
 
 module.exports = {
-    prefix: config.bower.project.angular.prefix,
+    prefix: config.bower.project ? config.bower.project.angular.prefix : '',
     ns: ns,
     nsString: ns.join('.'),
     module: {
-        prefix: config.bower.project.angular.prefix,
+        prefix: config.bower.project ? config.bower.project.angular.prefix : '',
         ns: ns.join('.')
     }
 };

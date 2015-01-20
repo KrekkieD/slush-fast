@@ -98,8 +98,6 @@ function createModule (transport) {
         target: (transport.target || '.') + '/' + transport.module.slug + '/'
     };
 
-    console.log(scaffoldConfig);
-
     return _commonPipes(scaffoldConfig);
 
 }

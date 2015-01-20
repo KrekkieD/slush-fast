@@ -191,7 +191,7 @@ module.exports = function (options) {
             transport.bower
         );
 
-        gutil.log('Preparing README files', readme);
+        gutil.log('Preparing README files');
 
         prepareReadme(readme, function () {
             gulp.src(globs.docs.readme.project.src)

@@ -21,8 +21,8 @@ module.exports = {
         },
         module: {
             src: [
-                config.paths.templates + '/module/module.module.js',
-                config.paths.templates + '/module/module.scenario.js'
+                config.paths.templates + '/module/**/module.module.js',
+                config.paths.templates + '/module/**/module.scenario.js'
             ]
         },
         provider: {

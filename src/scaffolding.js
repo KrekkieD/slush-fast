@@ -4,8 +4,8 @@ var fs = require('fs'),
 	iniparser = require('iniparser'),
 	path = require('path'),
 	_s = require('underscore.string'),
-	wrap = require('./q-utils')
-	.wrap;
+	wrap = require('./q-utils').wrap,
+    config = require('npmConfig')(__dirname);
 
 var scaffolding = {
 	getHomeDir: getHomeDir,
@@ -74,18 +74,23 @@ function getGitRepositoryUrl(remoteKey) {
 	return repositoryUrl;
 }
 
-function ns(dir) {
-	var srcAppDir = 'src' + path.sep + 'app';
+function ns (dir) {
 
-	var currentDir = path.resolve(dir);
-	var srcAppDirIndex = currentDir.indexOf(srcAppDir);
-	if (srcAppDirIndex !== -1) {
-		return currentDir.substring(srcAppDirIndex + srcAppDir.length + 1)
-			.split(path.sep);
-	} else {
-        return false;
-		throw new Error('Couldn\'t find src/app, you\'re not a in a source folder');
-	}
+    var fastConfig = config.fast;
+
+    if (fastConfig.fastPath && fastConfig.appRoot) {
+        // resolve the relative path of the appRoot
+        var srcAppDir = path.resolve(config.fast.fastPath, config.fast.appRoot);
+
+        var currentDir = path.resolve(dir);
+        var srcAppDirIndex = currentDir.indexOf(srcAppDir);
+        if (srcAppDirIndex !== -1) {
+            return currentDir.substring(srcAppDirIndex + srcAppDir.length + 1).split(path.sep);
+        }
+    }
+
+    return false;
+
 }
 
 // TODO: wrap all shared find-functionality in a single func for fast/bower/npm

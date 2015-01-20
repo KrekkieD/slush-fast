@@ -95,8 +95,10 @@ function createModule (transport) {
         transport: transport,
         name: transport.module.slug,
         prefixFilesWithModuleName: false,
-        target: './' + transport.module.slug + '/'
+        target: (transport.target || '.') + '/' + transport.module.slug + '/'
     };
+
+    console.log(scaffoldConfig);
 
     return _commonPipes(scaffoldConfig);
 

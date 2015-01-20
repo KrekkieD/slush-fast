@@ -13,7 +13,8 @@ var config = require('npmConfig')(__dirname),
 	Q = require('Q'),
     gulp = require('gulp'),
     seq = require('gulp-sequence').use(gulp),
-    gutil = require('gulp-util');
+    gutil = require('gulp-util'),
+    templating = require(config.paths.src + '/templating');
 
 var template = require('gulp-template');
 var conflict = require('gulp-conflict');
@@ -89,6 +90,7 @@ module.exports = function (options) {
                         name: answers.authorName,
                         email: answers.authorEmail
                     }],
+                    install: answers.install,
                     repository: {
                         type: 'git',
                         url: answers.appRepository
@@ -213,17 +215,15 @@ module.exports = function (options) {
 
 	gulp.task('create-module', function () {
 
-		return gulp.src([
-				config.paths.templates + '/module/module.module.js'
-				/*, templates + '/module/module.scenario.js' */
-			])
-			.pipe(rename(function (path) {
-				path.basename = transport.module.name + '.' + path.basename;
-			}))
-			.pipe(template(transport))
-			.pipe(prettify(config.prettify))
-			.pipe(conflict('./src/app/' + transport.module.name + '/'))
-			.pipe(gulp.dest('./src/app/' + transport.module.name + '/'));
+        var subTransport = {
+            module: transport.module,
+            target: './src/app'
+        };
+
+        return scaffolding.moduleName(subTransport)
+            .then(function () {
+                return templating.createModule(subTransport);
+            });
 
 	});
 
@@ -285,7 +285,8 @@ module.exports = function (options) {
             .pipe(jeditor(function (json) {
                 extend(json, {
                     angular: transport.project.angular,
-                    includes: transport.project.includes
+                    includes: transport.project.includes,
+                    appRoot: '.' + path.sep + 'src' + path.sep + 'app'
                 });
 
                 return json;
@@ -327,7 +328,7 @@ module.exports = function (options) {
 	});
 
 	gulp.task('install-npm-modules', function (done) {
-		if (!defaults.install) {
+		if (!transport.install) {
 			done();
 		} else {
 			return gulp.src('./package.json')

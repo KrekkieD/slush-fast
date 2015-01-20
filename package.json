@@ -11,10 +11,9 @@
   },
   "author": "",
   "license": "Commercial",
-  "devDependencies": {
-    "npmConfig": "git+https://bitbucket.org/Amnzero/npmconfig#1.0.0"
-  },
+  "devDependencies": {},
   "dependencies": {
+    "npmConfig": "git+https://bitbucket.org/Amnzero/npmconfig#1.0.0",
     "extend": "^2.0.0",
     "figlet": "^1.1.0",
     "glob": "^4.0.6",
